@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getFileContent, listDiagrams } from '$lib/util/github';
+  import { deleteDiagram, getFileContent, listDiagrams } from '$lib/util/github';
   import { githubConfigStore } from '$lib/util/githubConfig';
   import { notify } from '$lib/util/notify';
   import { stateStore, updateCodeStore } from '$lib/util/state';
@@ -21,6 +21,7 @@
   let diagrams = $state<GitHubFile[]>([]);
   let loading = $state(false);
   let showSettings = $state(false);
+  let deletingFile = $state<string | null>(null);
 
   // Local state for settings to avoid direct binding issues with $githubConfigStore
   let token = $state($githubConfigStore.token);
@@ -76,6 +77,22 @@
       notify(error instanceof Error ? error.message : String(error));
     } finally {
       loading = false;
+    }
+  };
+
+  const handleDelete = async (file: GitHubFile) => {
+    if (!confirm(`Are you sure you want to delete "${file.name}" from your repository?`)) {
+      return;
+    }
+    deletingFile = file.name;
+    try {
+      await deleteDiagram(file.path);
+      notify(`Deleted ${file.name}`);
+      await fetchDiagrams();
+    } catch (error: unknown) {
+      notify(error instanceof Error ? error.message : String(error));
+    } finally {
+      deletingFile = null;
     }
   };
 
@@ -166,18 +183,40 @@
       <ul class="flex flex-col gap-2">
         {#each diagrams as file (file.path)}
           <li
-            class="group flex items-center justify-between rounded-md border p-2 hover:bg-accent hover:text-accent-foreground">
+            class="group flex items-center justify-between rounded-md border p-2 transition-colors
+              {$stateStore.originalFilename === file.name || $stateStore.filename === file.name
+              ? 'border-primary/50 bg-primary/10 text-primary-foreground dark:border-primary/30 dark:bg-primary/20'
+              : 'hover:bg-accent hover:text-accent-foreground'}">
             <div class="flex items-center gap-2 overflow-hidden">
-              <FileIcon class="shrink-0" />
-              <span class="truncate text-sm" title={file.name}>{file.name}</span>
+              <FileIcon
+                class="shrink-0 {$stateStore.originalFilename === file.name ||
+                $stateStore.filename === file.name
+                  ? 'text-primary'
+                  : ''}" />
+              <span
+                class="truncate text-sm {$stateStore.originalFilename === file.name ||
+                $stateStore.filename === file.name
+                  ? 'font-medium'
+                  : ''}"
+                title={file.name}>{file.name}</span>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onclick={() => loadDiagram(file)}
-              disabled={loading}>
-              Load
-            </Button>
+            <div class="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onclick={() => loadDiagram(file)}
+                disabled={loading || deletingFile === file.name}>
+                Load
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                class="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
+                onclick={() => handleDelete(file)}
+                disabled={loading || deletingFile === file.name}>
+                {deletingFile === file.name ? '...' : 'Delete'}
+              </Button>
+            </div>
           </li>
         {/each}
       </ul>

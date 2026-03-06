@@ -10,11 +10,12 @@ export const listDiagrams = async () => {
     throw new Error('GitHub configuration missing');
   }
 
-  const response = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${path}`, {
+  const response = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${path}?t=${Date.now()}`, {
     headers: {
       Accept: 'application/vnd.github.v3+json',
       Authorization: `token ${token}`
-    }
+    },
+    cache: 'no-store'
   });
 
   if (!response.ok) {
@@ -33,12 +34,16 @@ export const listDiagrams = async () => {
 
 export const getFileContent = async (filePath: string) => {
   const { repo, token } = get(githubConfigStore);
-  const response = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${filePath}`, {
-    headers: {
-      Accept: 'application/vnd.github.v3+json',
-      Authorization: `token ${token}`
+  const response = await fetch(
+    `${GITHUB_API_URL}/repos/${repo}/contents/${filePath}?t=${Date.now()}`,
+    {
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        Authorization: `token ${token}`
+      },
+      cache: 'no-store'
     }
-  });
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch file: ${response.statusText}`);
@@ -59,12 +64,16 @@ export const saveDiagram = async (filename: string, content: string, originalFil
 
   // 1. Try to get the file SHA (for the new/target file)
   try {
-    const res = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${filePath}`, {
-      headers: {
-        Accept: 'application/vnd.github.v3+json',
-        Authorization: `token ${token}`
+    const res = await fetch(
+      `${GITHUB_API_URL}/repos/${repo}/contents/${filePath}?t=${Date.now()}`,
+      {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `token ${token}`
+        },
+        cache: 'no-store'
       }
-    });
+    );
     if (res.ok) {
       const data = await res.json();
       sha = data.sha;
@@ -113,12 +122,13 @@ export const saveDiagram = async (filename: string, content: string, originalFil
     try {
       // First get the SHA of the original file
       const originalRes = await fetch(
-        `${GITHUB_API_URL}/repos/${repo}/contents/${originalFilePath}`,
+        `${GITHUB_API_URL}/repos/${repo}/contents/${originalFilePath}?t=${Date.now()}`,
         {
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: `token ${token}`
-          }
+          },
+          cache: 'no-store'
         }
       );
       if (originalRes.ok) {
@@ -148,5 +158,54 @@ export const saveDiagram = async (filename: string, content: string, originalFil
       console.error('Error deleting original file after rename:', error);
       // We don't throw an error here because the save was already successful
     }
+  }
+};
+
+export const deleteDiagram = async (filePath: string) => {
+  const { repo, token } = get(githubConfigStore);
+  if (!token || !repo) {
+    throw new Error('GitHub configuration missing');
+  }
+
+  // First get the SHA of the file
+  const res = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${filePath}?t=${Date.now()}`, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `token ${token}`
+    },
+    cache: 'no-store'
+  });
+
+  if (!res.ok) {
+    let errorMsg = res.statusText;
+    try {
+      const errData = await res.json();
+      errorMsg = errData.message || errorMsg;
+    } catch {
+      // ignore
+    }
+    throw new Error(`Failed to get file info before deletion: ${errorMsg}`);
+  }
+
+  const data = await res.json();
+  const sha = data.sha;
+
+  // Then delete the file
+  const response = await fetch(`${GITHUB_API_URL}/repos/${repo}/contents/${filePath}`, {
+    body: JSON.stringify({
+      message: `Delete ${filePath} via Mermaid Live Editor`,
+      sha
+    }),
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to delete diagram: ${error.message || response.statusText}`);
   }
 };
