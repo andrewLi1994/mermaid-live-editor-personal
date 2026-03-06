@@ -36,6 +36,7 @@ export interface State {
   zoom?: number;
   loader?: LoaderConfig;
   filename?: string;
+  originalFilename?: string;
 }
 
 export interface ValidatedState extends State {
@@ -45,6 +46,7 @@ export interface ValidatedState extends State {
   errorMarkers: MarkerData[];
   serialized: string;
   filename: string;
+  originalFilename?: string;
 }
 
 export interface GistLoaderConfig {

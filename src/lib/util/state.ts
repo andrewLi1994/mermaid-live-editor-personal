@@ -26,6 +26,7 @@ export const defaultState: State = {
   mermaid: formatJSON({
     theme: 'default'
   }),
+  originalFilename: '',
   panZoom: true,
   rough: false,
   updateDiagram: true
@@ -53,6 +54,7 @@ export const currentState: ValidatedState = (() => {
     error: undefined,
     errorMarkers: [],
     filename: state.filename ?? '',
+    originalFilename: state.originalFilename ?? '',
     serialized: serializeState(state)
   };
 })();
@@ -66,6 +68,7 @@ const processState = async (state: State) => {
     error: undefined,
     errorMarkers: [],
     filename: state.filename ?? '',
+    originalFilename: state.originalFilename ?? '',
     serialized: ''
   };
   // No changes should be done to fields part of `state`.

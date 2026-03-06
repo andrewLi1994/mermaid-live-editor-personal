@@ -68,6 +68,7 @@
       updateCodeStore({
         code: content,
         filename: file.name,
+        originalFilename: file.name,
         updateDiagram: true
       });
       notify(`Loaded ${file.name}`);
@@ -128,7 +129,24 @@
 
   <div class="flex flex-col gap-2">
     <label for="filename" class="text-sm font-medium">Current Filename</label>
-    <Input id="filename" bind:value={$stateStore.filename} placeholder="diagram-name.mmd" />
+    <Input
+      id="filename"
+      value={$stateStore.filename}
+      oninput={(e) => updateCodeStore({ filename: e.currentTarget.value })}
+      placeholder="diagram-name.mmd" />
+    {#if $stateStore.originalFilename && $stateStore.filename !== $stateStore.originalFilename}
+      <div
+        class="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200">
+        You are about to save this as a new file. The original <strong
+          >{$stateStore.originalFilename}</strong>
+        will remain in Git.<br />
+        <button
+          class="mt-1 font-semibold underline hover:text-orange-600 dark:hover:text-orange-400"
+          onclick={() => updateCodeStore({ originalFilename: $stateStore.filename })}>
+          Rename instead
+        </button>
+      </div>
+    {/if}
   </div>
 
   <Separator />

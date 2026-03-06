@@ -99,13 +99,13 @@
         variant="accent"
         size="sm"
         onclick={async () => {
-          const { filename, code } = $stateStore;
+          const { filename, code, originalFilename } = $stateStore;
           if (!filename) {
             notify('Please specify a filename in the Git tab.');
             return;
           }
           try {
-            await saveDiagram(filename, code);
+            await saveDiagram(filename, code, originalFilename);
             notify(`Saved ${filename} to GitHub`);
           } catch (error: unknown) {
             notify(error instanceof Error ? error.message : String(error));
