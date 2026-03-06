@@ -33,6 +33,15 @@
     void fetchDiagrams();
   };
 
+  const generateDefaultFilename = (files: GitHubFile[]) => {
+    const existingNames = new Set(files.map((f) => f.name.toLowerCase()));
+    let index = 1;
+    while (existingNames.has(`diagram-${index}.mmd`)) {
+      index++;
+    }
+    return `diagram-${index}.mmd`;
+  };
+
   const fetchDiagrams = async () => {
     if (!$githubConfigStore.token || !$githubConfigStore.repo) {
       return;
@@ -40,6 +49,11 @@
     loading = true;
     try {
       diagrams = await listDiagrams();
+      // Auto-fill filename if it's currently empty
+      if (!$stateStore.filename && diagrams.length >= 0) {
+        const newFilename = generateDefaultFilename(diagrams);
+        updateCodeStore({ filename: newFilename });
+      }
     } catch (error: unknown) {
       notify(error instanceof Error ? error.message : String(error));
     } finally {
