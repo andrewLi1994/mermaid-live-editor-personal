@@ -59,7 +59,7 @@
   ];
 </script>
 
-<Card title="Sample Diagrams" isOpen isStackable icon={{ component: ShapesIcon }}>
+<Card title="Sample Diagrams" isStackable icon={{ component: ShapesIcon }}>
   <div class="flex h-fit max-h-52 flex-wrap gap-2 overflow-y-auto p-2">
     {#each diagramOrder as sample (sample)}
       <Button

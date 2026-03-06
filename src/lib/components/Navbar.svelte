@@ -82,19 +82,19 @@
 <nav class="z-50 flex p-4 sm:p-6">
   <div class="flex flex-1 items-center gap-2">
     <MainMenu />
-    <MermaidIcon class="size-6" />
-    <a href="/" class="whitespace-nowrap text-accent">
+    <MermaidIcon class="hidden size-6 sm:block" />
+    <a href="/" class="hidden whitespace-nowrap text-accent sm:block">
       {#if !mobileToggle}
         Mermaid
       {/if}
       Live Editor
     </a>
   </div>
-  <div
-    id="menu"
-    class="hidden flex-nowrap items-center justify-between gap-3 overflow-hidden md:flex">
-    <DropdownNavMenu icon={GithubIcon} links={githubLinks} />
-    <Separator orientation="vertical" />
+  <div id="menu" class="flex flex-nowrap items-center justify-between gap-3 overflow-hidden">
+    <div class="hidden items-center gap-3 md:flex">
+      <DropdownNavMenu icon={GithubIcon} links={githubLinks} />
+      <Separator orientation="vertical" />
+    </div>
     {@render children()}
   </div>
   {@render mobileToggle?.()}

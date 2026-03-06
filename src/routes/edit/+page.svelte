@@ -91,7 +91,9 @@
     <Toggle bind:pressed={isHistoryOpen} size="sm">
       <HistoryIcon />
     </Toggle>
-    <Share />
+    <div class="hidden md:block">
+      <Share />
+    </div>
     <McWrapper>
       <Button
         variant="accent"
@@ -110,7 +112,7 @@
           }
         }}>
         <MermaidChartIcon />
-        Save to Git
+        <span class="hidden md:inline">Save to Git</span>
       </Button>
     </McWrapper>
   </Navbar>
@@ -154,7 +156,7 @@
         </Resizable.Pane>
         {#if isHistoryOpen}
           <Resizable.Handle class="ml-1 hidden opacity-0 sm:block" />
-          <Resizable.Pane minSize={15} defaultSize={30} class="hidden h-full grow flex-col sm:flex">
+          <Resizable.Pane minSize={15} defaultSize={30} class="flex h-full grow flex-col">
             <History />
           </Resizable.Pane>
         {/if}

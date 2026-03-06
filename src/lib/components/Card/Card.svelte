@@ -54,27 +54,35 @@
     role="toolbar"
     tabindex="0"
     class={[
-      'flex h-11 flex-none cursor-pointer items-center justify-between bg-muted p-2 whitespace-nowrap',
+      'flex h-11 flex-none cursor-pointer items-center justify-between gap-2 overflow-hidden bg-muted p-2 whitespace-nowrap',
       isTabsShown && 'pb-1'
     ]}
     onclick={toggleCardOpen}
     onkeypress={toggleCardOpen}>
     {#if icon || title}
-      <span role="menubar" tabindex="0" class="flex w-fit items-center gap-3">
+      <span role="menubar" tabindex="0" class="flex flex-shrink-0 items-center gap-3">
         {#if icon}
           <icon.component class={icon.class} />
         {/if}
         {title}
       </span>
     {/if}
-    {#if isOpen && tabs && tabs.length > 0}
-      <Tabs {onselect} {tabs} {activeTabID} />
+    {#if (isOpen && tabs && tabs.length > 0) || actions}
+      <div class="scrollbar-none flex flex-grow items-center gap-2 overflow-x-auto">
+        {#if isOpen && tabs && tabs.length > 0}
+          <Tabs {onselect} {tabs} {activeTabID} />
+        {/if}
+
+        <div class="flex items-center gap-2">
+          {@render actions?.()}
+        </div>
+      </div>
     {/if}
 
-    {@render actions?.()}
-
     {#if isOpen && isClosable}
-      <CollapseAllIcon />
+      <div class="flex flex-shrink-0 items-center">
+        <CollapseAllIcon />
+      </div>
     {/if}
   </div>
   {#if isOpen}

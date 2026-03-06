@@ -26,24 +26,24 @@
   };
 </script>
 
-<div class="flex w-fit cursor-default items-center gap-2">
+<div class="flex cursor-default items-center gap-2">
   <ul class="flex gap-2 align-middle" transition:fade>
     {#each tabs as tab, index (tab.id)}
       <Button
         role="tab"
         variant="ghost"
         class={[
-          'px-2',
+          'flex-shrink-0 px-2',
           activeTabID === tab.id && 'rounded-b-none border-b-2 border-b-primary-foreground/50'
         ]}
         onclick={toggleTabs(tab)}
         onkeypress={toggleTabs(tab)}>
         <tab.icon />
-        {tab.title}
+        <span class="whitespace-nowrap">{tab.title}</span>
       </Button>
 
       {#if index < tabs.length - 1}
-        <div class="my-2">
+        <div class="my-2 flex-shrink-0">
           <Separator orientation="vertical" class="w-0.5 bg-slate-300" />
         </div>
       {/if}

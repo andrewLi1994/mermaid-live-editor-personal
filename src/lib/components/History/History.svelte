@@ -11,6 +11,7 @@
   import BookmarkIcon from '~icons/material-symbols/bookmark-outline-rounded';
   import TrashAltIcon from '~icons/material-symbols/delete-outline-rounded';
   import DownloadIcon from '~icons/material-symbols/download-rounded';
+  import MoreIcon from '~icons/material-symbols/more-vert';
   import SaveIcon from '~icons/material-symbols/save-outline-rounded';
   import UndoIcon from '~icons/material-symbols/settings-backup-restore-rounded';
   import UploadIcon from '~icons/material-symbols/upload-rounded';
@@ -18,6 +19,7 @@
   import GitAltIcon from '~icons/mdi/git';
   import GitExplorer from '../GitExplorer.svelte';
   import { Button } from '../ui/button';
+  import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
   import { Separator } from '../ui/separator';
   import {
     addHistoryEntry,
@@ -133,37 +135,52 @@
 
 <Card onselect={tabSelectHandler} isOpen isClosable={false} {tabs}>
   {#snippet actions()}
-    <div class="flex items-center gap-2">
-      <Button
-        size="icon"
-        variant="ghost"
-        id="uploadHistory"
-        onclick={uploadHistory}
-        title="Upload history"><UploadIcon /></Button>
-      {#if $historyStore.length > 0}
-        <Button
-          id="downloadHistory"
-          size="icon"
-          variant="ghost"
-          onclick={downloadHistory}
-          title="Download history"><DownloadIcon /></Button>
-      {/if}
-      <Separator orientation="vertical" />
+    <div class="flex items-center gap-1">
       <Button
         id="saveHistory"
         size="icon"
         variant="ghost"
         onclick={() => saveHistory()}
         title="Save current state"><SaveIcon /></Button>
-      {#if $historyModeStore !== 'loader'}
-        <Button
-          id="clearHistory"
-          size="icon"
-          variant="ghost"
-          class="hover:text-destructive"
-          onclick={() => clearHistory()}
-          title="Delete all saved states"><TrashAltIcon /></Button>
-      {/if}
+
+      <Popover>
+        <PopoverTrigger>
+          <Button size="icon" variant="ghost" title="More actions">
+            <MoreIcon />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent class="flex w-fit flex-col gap-1 p-1">
+          <Button
+            variant="ghost"
+            class="justify-start gap-2 px-3"
+            id="uploadHistory"
+            onclick={uploadHistory}>
+            <UploadIcon class="h-4 w-4" />
+            Upload history
+          </Button>
+          {#if $historyStore.length > 0}
+            <Button
+              id="downloadHistory"
+              variant="ghost"
+              class="justify-start gap-2 px-3"
+              onclick={downloadHistory}>
+              <DownloadIcon class="h-4 w-4" />
+              Download history
+            </Button>
+          {/if}
+          {#if $historyModeStore !== 'loader'}
+            <Separator class="my-1" />
+            <Button
+              id="clearHistory"
+              variant="ghost"
+              class="justify-start gap-2 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onclick={() => clearHistory()}>
+              <TrashAltIcon class="h-4 w-4" />
+              Clear all
+            </Button>
+          {/if}
+        </PopoverContent>
+      </Popover>
     </div>
   {/snippet}
   <ul class="flex h-full min-w-fit flex-col gap-2 overflow-auto p-2" id="historyList">
@@ -172,7 +189,7 @@
     {:else if $historyStore.length > 0}
       {#each $historyStore as { id, state, time, name, url, type } (id)}
         <li class="flex flex-col gap-2">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-col">
               {#if url}
                 <a
@@ -181,29 +198,33 @@
                   title="Open revision in new tab"
                   class="text-blue-500 hover:underline">{name}</a>
               {:else}
-                <span class="whitespace-nowrap">{name}</span>
+                <span
+                  class="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap sm:max-w-none"
+                  >{name}</span>
               {/if}
-              <span class="text-xs whitespace-nowrap text-primary-foreground/30">
+              <span class="text-xs whitespace-nowrap text-primary-foreground/30 sm:block">
                 {new Date(time).toLocaleString()}
               </span>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-2 sm:justify-end">
               <span class="text-sm whitespace-nowrap text-primary-foreground/50">
                 {dayjs(time).fromNow()}
               </span>
-              <Button size="icon" variant="ghost" onclick={() => restoreHistoryItem(state)}>
-                <UndoIcon />
-              </Button>
-              {#if type !== 'loader'}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  class="hover:text-destructive"
-                  onclick={() => clearHistory(id)}>
-                  <TrashAltIcon />
+              <div class="flex items-center gap-1">
+                <Button size="icon" variant="ghost" onclick={() => restoreHistoryItem(state)}>
+                  <UndoIcon />
                 </Button>
-              {/if}
+                {#if type !== 'loader'}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    class="hover:text-destructive"
+                    onclick={() => clearHistory(id)}>
+                    <TrashAltIcon />
+                  </Button>
+                {/if}
+              </div>
             </div>
           </div>
           <Separator />
