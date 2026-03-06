@@ -41,9 +41,9 @@
 
   let tabs: Tab[] = $state([
     {
-      id: 'manual',
-      title: 'Saved',
-      icon: BookmarkIcon
+      id: 'git',
+      title: 'Git',
+      icon: GitAltIcon
     },
     {
       id: 'auto',
@@ -51,9 +51,9 @@
       icon: HistoryIcon
     },
     {
-      id: 'git',
-      title: 'Git',
-      icon: GitAltIcon
+      id: 'manual',
+      title: 'Saved',
+      icon: BookmarkIcon
     }
   ]);
 
@@ -112,7 +112,7 @@
   };
 
   onMount(() => {
-    historyModeStore.set('manual');
+    historyModeStore.set('git');
     setInterval(() => {
       saveHistory(true);
     }, HISTORY_SAVE_INTERVAL);
