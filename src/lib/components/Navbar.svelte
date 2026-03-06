@@ -79,7 +79,7 @@
   </div>
 {/if}
 
-<nav class="z-50 flex p-4 sm:p-6">
+<nav class="z-50 flex items-center gap-2 p-4 sm:gap-4 sm:p-6">
   <div class="flex flex-1 items-center gap-2">
     <MainMenu />
     <MermaidIcon class="hidden size-6 sm:block" />

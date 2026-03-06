@@ -76,7 +76,7 @@
 
 <div class="flex h-full flex-col overflow-hidden">
   {#snippet mobileToggle()}
-    <div class="flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2 text-sm">
       Edit <Switch
         id="editorMode"
         class="data-[state=checked]:bg-accent"
@@ -112,7 +112,7 @@
           }
         }}>
         <MermaidChartIcon />
-        <span class="hidden md:inline">Save to Git</span>
+        <span class="inline">Save to Git</span>
       </Button>
     </McWrapper>
   </Navbar>
