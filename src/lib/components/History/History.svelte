@@ -16,6 +16,7 @@
   import UploadIcon from '~icons/material-symbols/upload-rounded';
   import HistoryIcon from '~icons/mdi/clock-outline';
   import GitAltIcon from '~icons/mdi/git';
+  import GitExplorer from '../GitExplorer.svelte';
   import { Button } from '../ui/button';
   import { Separator } from '../ui/separator';
   import {
@@ -46,6 +47,11 @@
       id: 'auto',
       title: 'Timeline',
       icon: HistoryIcon
+    },
+    {
+      id: 'git',
+      title: 'Git',
+      icon: GitAltIcon
     }
   ]);
 
@@ -161,7 +167,9 @@
     </div>
   {/snippet}
   <ul class="flex h-full min-w-fit flex-col gap-2 overflow-auto p-2" id="historyList">
-    {#if $historyStore.length > 0}
+    {#if $historyModeStore === 'git'}
+      <GitExplorer />
+    {:else if $historyStore.length > 0}
       {#each $historyStore as { id, state, time, name, url, type } (id)}
         <li class="flex flex-col gap-2">
           <div class="flex items-center justify-between">

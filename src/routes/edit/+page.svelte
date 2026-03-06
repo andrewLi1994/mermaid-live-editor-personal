@@ -19,10 +19,12 @@
   import VersionSecurityToolbar from '$/components/VersionSecurityToolbar.svelte';
   import View from '$/components/View.svelte';
   import type { EditorMode, Tab } from '$/types';
+  import { saveDiagram } from '$/util/github';
   import { shouldShowEditorChooser } from '$/util/migration/domainMigration';
+  import { notify } from '$/util/notify';
   import { PanZoomState } from '$/util/panZoom';
-  import { stateStore, updateCodeStore, urlsStore } from '$/util/state';
-  import { logEvent, logMermaidChartClick } from '$/util/stats';
+  import { stateStore, updateCodeStore } from '$/util/state';
+  import { logEvent } from '$/util/stats';
   import { initHandler } from '$/util/util';
   import { onMount } from 'svelte';
   import CodeIcon from '~icons/custom/code';
@@ -94,11 +96,21 @@
       <Button
         variant="accent"
         size="sm"
-        href={$urlsStore.mermaidChart({ medium: 'save_diagram' }).save}
-        target="_blank"
-        onclick={() => logMermaidChartClick('saveDiagram')}>
+        onclick={async () => {
+          const { filename, code } = $stateStore;
+          if (!filename) {
+            notify('Please specify a filename in the Git tab.');
+            return;
+          }
+          try {
+            await saveDiagram(filename, code);
+            notify(`Saved ${filename} to GitHub`);
+          } catch (error: unknown) {
+            notify(error instanceof Error ? error.message : String(error));
+          }
+        }}>
         <MermaidChartIcon />
-        Save diagram
+        Save to Git
       </Button>
     </McWrapper>
   </Navbar>

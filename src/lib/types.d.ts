@@ -35,6 +35,7 @@ export interface State {
   pan?: { x: number; y: number };
   zoom?: number;
   loader?: LoaderConfig;
+  filename?: string;
 }
 
 export interface ValidatedState extends State {
@@ -43,6 +44,7 @@ export interface ValidatedState extends State {
   error?: Error;
   errorMarkers: MarkerData[];
   serialized: string;
+  filename: string;
 }
 
 export interface GistLoaderConfig {
@@ -66,7 +68,7 @@ export type LoaderConfig =
       type: 'files';
       config: FileLoaderConfig;
     };
-export type HistoryType = 'auto' | 'manual' | 'loader';
+export type HistoryType = 'auto' | 'manual' | 'loader' | 'git';
 export type HistoryEntry = { id: string; state: State; time: number; url?: string } & (
   | {
       type: 'loader';

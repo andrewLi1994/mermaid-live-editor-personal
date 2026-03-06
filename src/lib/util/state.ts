@@ -21,6 +21,7 @@ export const defaultState: State = {
     C -->|Two| E[iPhone]
     C -->|Three| F[fa:fa-car Car]
   `,
+  filename: '',
   grid: true,
   mermaid: formatJSON({
     theme: 'default'
@@ -51,6 +52,7 @@ export const currentState: ValidatedState = (() => {
     editorMode: state.editorMode ?? 'code',
     error: undefined,
     errorMarkers: [],
+    filename: state.filename ?? '',
     serialized: serializeState(state)
   };
 })();
@@ -63,6 +65,7 @@ const processState = async (state: State) => {
     editorMode: state.editorMode ?? 'code',
     error: undefined,
     errorMarkers: [],
+    filename: state.filename ?? '',
     serialized: ''
   };
   // No changes should be done to fields part of `state`.
