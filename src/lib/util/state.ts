@@ -11,7 +11,8 @@ import {
 import { parse } from './mermaid';
 import { localStorage, persist } from './persist';
 import { deserializeState, pakoSerde, serializeState } from './serde';
-import { errorDebug, formatJSON, getUTMSource, MCBaseURL } from './util';
+import { errorDebug, formatJSON } from './util';
+import { generateDiagramName } from './naming';
 
 export const defaultState: State = {
   code: `flowchart TD
@@ -23,12 +24,14 @@ export const defaultState: State = {
   `,
   filename: '',
   grid: true,
+  lastActionTimestamp: 0,
   mermaid: formatJSON({
     theme: 'default'
   }),
   originalFilename: '',
   panZoom: true,
   rough: false,
+  title: '',
   updateDiagram: true
 };
 
@@ -142,23 +145,7 @@ export const urlsStore = derived([stateStore], ([{ code, serialized }]) => {
     mdCode: png
       ? `[![](${png})](${window.location.protocol}//${window.location.host}${window.location.pathname}#${serialized})`
       : '',
-    mermaidChart: ({
-      medium
-    }: {
-      medium: 'ai_repair' | 'main_menu' | 'save_diagram' | 'share' | 'vibe_diagramming';
-    }) => {
-      const utmSource = getUTMSource();
-      const params = new URLSearchParams({
-        utm_source: utmSource,
-        utm_medium: medium
-      }).toString();
-      return {
-        save: `${MCBaseURL}/app/plugin/save?state=${serialized}&${params}`,
-        playground: `${MCBaseURL}/play?${params}#${serialized}`,
-        plugins: `${MCBaseURL}/plugins?${params}`,
-        home: `${MCBaseURL}/?${params}`
-      };
-    },
+
     new: `${window.location.protocol}//${window.location.host}${window.location.pathname}#${serializeState(defaultState)}`,
     png,
     svg: rendererUrl ? `${rendererUrl}/svg/${serialized}` : '',
@@ -173,6 +160,12 @@ export const loadState = (data: string): void => {
     state = deserializeState(data);
     if (!state.mermaid) {
       state.mermaid = defaultState.mermaid;
+    }
+    if (!state.title || !state.title.trim()) {
+      state.title = generateDiagramName();
+    }
+    if (!state.filename || !state.filename.trim()) {
+      state.filename = state.title;
     }
     const mermaidConfig: MermaidConfig =
       typeof state.mermaid === 'string'
@@ -202,8 +195,19 @@ export const loadState = (data: string): void => {
 let renderCount = 0;
 export const updateCodeStore = (newState: Partial<State>): void => {
   inputStateStore.update((state) => {
+    const updated = { ...state, ...newState };
+
+    // Strict Sync logic: Keep title and filename 1:1 in sync
+    if (newState.title !== undefined || newState.filename !== undefined) {
+      const newName = newState.title ?? newState.filename;
+      if (newName !== undefined) {
+        updated.title = newName;
+        updated.filename = newName;
+      }
+    }
+
     renderCount++;
-    return { ...state, ...newState, renderCount };
+    return { ...updated, renderCount };
   });
 };
 

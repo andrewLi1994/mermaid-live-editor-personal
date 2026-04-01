@@ -4,9 +4,6 @@
   import DiagramDocButton from '$/components/DiagramDocumentationButton.svelte';
   import Editor from '$/components/Editor.svelte';
   import History from '$/components/History/History.svelte';
-  import McWrapper from '$/components/McWrapper.svelte';
-  import MermaidChartIcon from '$/components/MermaidChartIcon.svelte';
-  import EditorChooserModal from '$/components/migration/EditorChooserModal.svelte';
   import Navbar from '$/components/Navbar.svelte';
   import PanZoomToolbar from '$/components/PanZoomToolbar.svelte';
   import Preset from '$/components/Preset.svelte';
@@ -19,8 +16,7 @@
   import VersionSecurityToolbar from '$/components/VersionSecurityToolbar.svelte';
   import View from '$/components/View.svelte';
   import type { EditorMode, Tab } from '$/types';
-  import { saveDiagram } from '$/util/github';
-  import { shouldShowEditorChooser } from '$/util/migration/domainMigration';
+  import { githubFilesStore, saveDiagram } from '$/util/github';
   import { notify } from '$/util/notify';
   import { PanZoomState } from '$/util/panZoom';
   import { stateStore, updateCodeStore } from '$/util/state';
@@ -54,10 +50,8 @@
   let width = $state(0);
   let isMobile = $derived(width < 640);
   let isViewMode = $state(true);
-  let showEditorChooser = $state(false);
 
   onMount(async () => {
-    showEditorChooser = shouldShowEditorChooser();
     await initHandler();
     window.addEventListener('appinstalled', () => {
       logEvent('pwaInstalled', { isMobile });
@@ -72,18 +66,58 @@
       editorPane?.resize(50);
     }
   });
+
+  const saveAction = async (saveAsCopy = false) => {
+    const { filename, code, originalFilename } = $stateStore;
+    if (!filename) {
+      notify('Please specify a filename in the Git tab.');
+      return;
+    }
+    try {
+      await saveDiagram(filename, code, { originalFilename, saveAsCopy });
+      updateCodeStore({ lastActionTimestamp: Date.now() });
+      notify(saveAsCopy ? `Saved copy to ${filename}` : `Saved ${filename} to GitHub`);
+    } catch (error: unknown) {
+      notify(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  // Collision detection: does the current filename match an existing file that isn't the one we loaded?
+  const isNameChanged = $derived(
+    !!$stateStore.originalFilename && $stateStore.filename !== $stateStore.originalFilename
+  );
+  const hasCollision = $derived(
+    $githubFilesStore.some(
+      (f) =>
+        f.name.toLowerCase() === ($stateStore.filename || '').toLowerCase() &&
+        f.name.toLowerCase() !== ($stateStore.originalFilename || '').toLowerCase()
+    )
+  );
+
+  const getSaveButtonLabel = () => {
+    if (isMobile) {
+      if (isNameChanged && hasCollision) return 'Overwrite';
+      if (isNameChanged) return 'Rename';
+      return 'Save';
+    }
+    if (isNameChanged && hasCollision) return 'Overwrite & Save';
+    if (isNameChanged) return 'Rename & Save';
+    return 'Save to Git';
+  };
 </script>
 
 <div class="flex h-full flex-col overflow-hidden">
   {#snippet mobileToggle()}
     <div class="flex shrink-0 items-center gap-2 text-sm">
-      Edit <Switch
+      <span class="hidden font-medium sm:inline">Edit</span>
+      <Switch
         id="editorMode"
-        class="data-[state=checked]:bg-accent"
+        class="scale-90 data-[state=checked]:bg-accent"
         bind:checked={isViewMode}
         onclick={() => {
           logEvent('mobileViewToggle');
-        }} /> View
+        }} />
+      <span class="hidden font-medium sm:inline">View</span>
     </div>
   {/snippet}
 
@@ -94,27 +128,33 @@
     <div class="hidden md:block">
       <Share />
     </div>
-    <McWrapper>
+    <div class="flex items-center gap-2">
+      {#if isNameChanged}
+        <Button
+          variant="outline"
+          size="sm"
+          class="hidden lg:flex"
+          onclick={() => saveAction(true)}
+          title="Save as a new copy, keeping the original file">
+          Save as Copy
+        </Button>
+      {/if}
+      {#if hasCollision}
+        <span
+          class="hidden text-[10px] font-semibold text-orange-500 lg:inline"
+          title="A file with this name already exists">
+          ⚠ Conflict
+        </span>
+      {/if}
       <Button
-        variant="accent"
+        variant={hasCollision ? 'destructive' : 'accent'}
         size="sm"
-        onclick={async () => {
-          const { filename, code, originalFilename } = $stateStore;
-          if (!filename) {
-            notify('Please specify a filename in the Git tab.');
-            return;
-          }
-          try {
-            await saveDiagram(filename, code, originalFilename);
-            notify(`Saved ${filename} to GitHub`);
-          } catch (error: unknown) {
-            notify(error instanceof Error ? error.message : String(error));
-          }
-        }}>
-        <MermaidChartIcon />
-        <span class="inline">Save to Git</span>
+        onclick={() => saveAction(false)}>
+        <span class="inline">
+          {getSaveButtonLabel()}
+        </span>
       </Button>
-    </McWrapper>
+    </div>
   </Navbar>
 
   <div class="flex flex-1 flex-col overflow-hidden" bind:clientWidth={width}>
@@ -164,5 +204,3 @@
     </div>
   </div>
 </div>
-
-<EditorChooserModal bind:open={showEditorChooser} />

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import McWrapper from '$/components/McWrapper.svelte';
   import * as Popover from '$/components/ui/popover';
   import { Switch } from '$/components/ui/switch';
   import { env } from '$/util/env';
-  import { urlsStore } from '$/util/state';
-  import { logMermaidChartClick } from '$/util/stats';
+  import { defaultState } from '$/util/state';
+  import { serializeState } from '$/util/serde';
+  import { generateDiagramName } from '$/util/naming';
   import { cn } from '$/utils';
   import { mode, setMode } from 'mode-watcher';
   import type { Component, Snippet } from 'svelte';
@@ -13,11 +13,10 @@
   import BookIcon from '~icons/material-symbols/book-2-outline-rounded';
   import DuplicateIcon from '~icons/material-symbols/content-copy-outline-rounded';
   import ContrastIcon from '~icons/material-symbols/contrast';
-  import PluginIcon from '~icons/material-symbols/electrical-services-rounded';
   import MenuIcon from '~icons/material-symbols/menu-rounded';
   import CommunityIcon from '~icons/material-symbols/person-play-outline-rounded';
-  import PlaygroundIcon from '~icons/material-symbols/shape-line-outline';
-  import MermaidChartIcon from './MermaidChartIcon.svelte';
+  import AISettingsModal from './AISettingsModal.svelte';
+  import SparklesIcon from '~icons/material-symbols/kid-star-outline';
 
   interface MenuItem {
     label: string;
@@ -31,43 +30,45 @@
     renderer: (item: Omit<MenuItem, 'renderer'>) => ReturnType<Snippet>;
   }
 
+  let showAISettings = $state(false);
+
   const menuItems: MenuItem[] = $derived([
-    { label: 'New', icon: AddIcon, href: $urlsStore.new, renderer: menuItem },
-    { label: 'Duplicate', icon: DuplicateIcon, href: window.location.href, renderer: menuItem },
     {
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).playground,
-      icon: PlaygroundIcon,
+      href: '#',
+      icon: AddIcon,
+      label: 'New',
+      onclick: () => {
+        const newState = { ...defaultState, title: generateDiagramName() };
+        window.location.hash = serializeState(newState);
+      },
+      renderer: menuItem
+    },
+    { href: window.location.href, icon: DuplicateIcon, label: 'Duplicate', renderer: menuItem },
+    {
+      href: '#',
+      icon: SparklesIcon,
       isSectionEnd: true,
-      label: 'Edit in Playground',
-      onclick: () => logMermaidChartClick('editInPlayground'),
-      renderer: mcMenuItem
+      label: 'AI Settings',
+      onclick: () => (showAISettings = true),
+      renderer: menuItem
     },
     {
-      label: 'Mermaid.js',
-      icon: MermaidTailIcon,
       href: env.docsUrl,
+      icon: MermaidTailIcon,
+      label: 'Mermaid.js',
       renderer: menuItem
     },
     {
-      label: 'Documentation',
-      icon: BookIcon,
       href: `${env.docsUrl}/intro/`,
+      icon: BookIcon,
+      label: 'Documentation',
       renderer: menuItem
     },
     {
-      label: 'Community',
-      icon: CommunityIcon,
       href: 'https://discord.gg/sKeNQX4Wtj',
+      icon: CommunityIcon,
+      label: 'Community',
       renderer: menuItem
-    },
-    {
-      checkDiagramType: false,
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).plugins,
-      icon: PluginIcon,
-      label: 'Plugins',
-      onclick: () => logMermaidChartClick('plugins'),
-      renderer: mcMenuItem,
-      sharesData: false
     },
     {
       href: '#',
@@ -75,16 +76,6 @@
       isSectionEnd: true,
       label: 'Dark Mode',
       renderer: darkModeMenuItem
-    },
-    {
-      checkDiagramType: false,
-      class: 'text-accent border-b-0',
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).home,
-      icon: MermaidChartIcon,
-      label: 'Mermaid',
-      onclick: () => logMermaidChartClick('mermaidHome'),
-      renderer: mcMenuItem,
-      sharesData: false
     }
   ]);
 </script>
@@ -92,8 +83,15 @@
 {#snippet menuItem(options: MenuItem)}
   <a
     href={options.href}
-    target="_blank"
-    onclick={options.onclick}
+    target={options.href.startsWith('http') ? '_blank' : undefined}
+    onclick={(e) => {
+      if (options.onclick) {
+        options.onclick();
+        if (options.href === '#' || options.href.includes(window.location.host)) {
+          e.preventDefault();
+        }
+      }
+    }}
     class={cn(
       'flex items-center justify-start gap-2 border-b-2 p-2 px-3 hover:bg-muted',
       options.isSectionEnd && 'border-border-dark',
@@ -102,16 +100,6 @@
     <options.icon class="size-5" />
     {options.label}
   </a>
-{/snippet}
-
-{#snippet mcMenuItem(item: MenuItem)}
-  <McWrapper
-    side="right"
-    labelPrefix={item.sharesData === false ? 'Opens a new tab in' : undefined}
-    sharesData={item.sharesData}
-    shouldCheckDiagramType={item.checkDiagramType}>
-    {@render menuItem(item)}
-  </McWrapper>
 {/snippet}
 
 {#snippet darkModeMenuItem(options: MenuItem)}
@@ -141,3 +129,5 @@
     {/each}
   </Popover.Content>
 </Popover.Root>
+
+<AISettingsModal bind:open={showAISettings} />

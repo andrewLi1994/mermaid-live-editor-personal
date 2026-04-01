@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { deleteDiagram, getFileContent, listDiagrams } from '$lib/util/github';
+  import {
+    deleteDiagram,
+    getFileContent,
+    githubFilesStore,
+    listDiagrams,
+    type GitHubFile
+  } from '$lib/util/github';
   import { githubConfigStore } from '$lib/util/githubConfig';
   import { notify } from '$lib/util/notify';
   import { stateStore, updateCodeStore } from '$lib/util/state';
@@ -11,17 +17,15 @@
   import { Button } from './ui/button';
   import { Input } from './ui/input';
   import { Separator } from './ui/separator';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
-  interface GitHubFile {
-    name: string;
-    path: string;
-    [key: string]: unknown;
-  }
-
-  let diagrams = $state<GitHubFile[]>([]);
   let loading = $state(false);
   let showSettings = $state(false);
   let deletingFile = $state<string | null>(null);
+
+  // Confirm dialog state
+  let confirmOpen = $state(false);
+  let fileToDelete = $state<GitHubFile | null>(null);
 
   // Local state for settings to avoid direct binding issues with $githubConfigStore
   let token = $state($githubConfigStore.token);
@@ -49,10 +53,10 @@
     }
     loading = true;
     try {
-      diagrams = await listDiagrams();
+      const files = await listDiagrams();
       // Auto-fill filename if it's currently empty
-      if (!$stateStore.filename && diagrams.length >= 0) {
-        const newFilename = generateDefaultFilename(diagrams);
+      if (!$stateStore.filename && files.length >= 0) {
+        const newFilename = generateDefaultFilename(files);
         updateCodeStore({ filename: newFilename });
       }
     } catch (error: unknown) {
@@ -80,26 +84,49 @@
     }
   };
 
-  const handleDelete = async (file: GitHubFile) => {
-    if (!confirm(`Are you sure you want to delete "${file.name}" from your repository?`)) {
-      return;
-    }
+  const requestDelete = (file: GitHubFile) => {
+    fileToDelete = file;
+    confirmOpen = true;
+  };
+
+  const confirmDelete = async () => {
+    if (!fileToDelete) return;
+    const file = fileToDelete;
     deletingFile = file.name;
     try {
       await deleteDiagram(file.path);
+      // Remove from store immediately for instant UI feedback
+      githubFilesStore.update((files) => files.filter((f) => f.path !== file.path));
+      updateCodeStore({ lastActionTimestamp: Date.now() });
       notify(`Deleted ${file.name}`);
-      await fetchDiagrams();
     } catch (error: unknown) {
       notify(error instanceof Error ? error.message : String(error));
     } finally {
       deletingFile = null;
+      fileToDelete = null;
     }
   };
 
+  $effect(() => {
+    if ($stateStore.lastActionTimestamp && $stateStore.lastActionTimestamp > 0) {
+      void fetchDiagrams();
+    }
+  });
+
   onMount(() => {
-    fetchDiagrams();
+    void fetchDiagrams();
   });
 </script>
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete Diagram"
+  message={fileToDelete
+    ? `Are you sure you want to delete "${fileToDelete.name}" from your repository? This action cannot be undone.`
+    : ''}
+  confirmLabel="Delete"
+  cancelLabel="Cancel"
+  onconfirm={confirmDelete} />
 
 <div class="flex h-full flex-col gap-4 overflow-hidden p-2">
   <div class="flex items-center justify-between">
@@ -144,36 +171,41 @@
     </div>
   {/if}
 
-  <div class="flex flex-col gap-2">
-    <label for="filename" class="text-sm font-medium">Current Filename</label>
-    <Input
-      id="filename"
-      value={$stateStore.filename}
-      oninput={(e) => updateCodeStore({ filename: e.currentTarget.value })}
-      placeholder="diagram-name.mmd" />
-    {#if $stateStore.originalFilename && $stateStore.filename !== $stateStore.originalFilename}
-      <div
-        class="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200">
-        You are about to save this as a new file. The original <strong
-          >{$stateStore.originalFilename}</strong>
-        will remain in Git.<br />
-        <button
-          class="mt-1 font-semibold underline hover:text-orange-600 dark:hover:text-orange-400"
-          onclick={() => updateCodeStore({ originalFilename: $stateStore.filename })}>
-          Rename instead
-        </button>
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-medium tracking-wider text-muted-foreground uppercase"
+        >Active Diagram</span>
+      {#if $stateStore.originalFilename && $stateStore.filename !== $stateStore.originalFilename}
+        <span
+          class="rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-orange-500 uppercase"
+          >Renaming</span>
+      {/if}
+    </div>
+    <div class="group relative flex items-center gap-2">
+      <div class="absolute left-3 text-muted-foreground">
+        <FileIcon class="size-4" />
       </div>
+      <Input
+        class="h-9 border-muted-foreground/20 bg-background/50 pl-9 text-sm font-medium focus:border-primary"
+        value={$stateStore.title}
+        oninput={(e) => updateCodeStore({ title: e.currentTarget.value })}
+        placeholder="Name your diagram..." />
+    </div>
+    {#if $stateStore.originalFilename && $stateStore.filename !== $stateStore.originalFilename}
+      <p class="px-1 text-[10px] text-muted-foreground italic">
+        Target: <span class="font-mono">{$stateStore.filename}</span> (Original: {$stateStore.originalFilename})
+      </p>
     {/if}
   </div>
 
   <Separator />
 
   <div class="flex-1 overflow-auto">
-    {#if loading && diagrams.length === 0}
+    {#if loading && $githubFilesStore.length === 0}
       <div class="flex h-32 items-center justify-center text-primary-foreground/50">
         Loading diagrams...
       </div>
-    {:else if diagrams.length === 0}
+    {:else if $githubFilesStore.length === 0}
       <div
         class="flex h-32 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-primary-foreground/50">
         <p>No .mmd files found.</p>
@@ -181,7 +213,7 @@
       </div>
     {:else}
       <ul class="flex flex-col gap-2">
-        {#each diagrams as file (file.path)}
+        {#each $githubFilesStore as file (file.path)}
           <li
             class="group flex items-center justify-between rounded-md border p-2 transition-colors
               {$stateStore.originalFilename === file.name || $stateStore.filename === file.name
@@ -212,7 +244,7 @@
                 size="sm"
                 variant="outline"
                 class="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
-                onclick={() => handleDelete(file)}
+                onclick={() => requestDelete(file)}
                 disabled={loading || deletingFile === file.name}>
                 {deletingFile === file.name ? '...' : 'Delete'}
               </Button>

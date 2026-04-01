@@ -73,7 +73,11 @@
           <Tabs {onselect} {tabs} {activeTabID} />
         {/if}
 
-        <div class="flex items-center gap-2">
+        <div
+          class="flex items-center gap-2"
+          onclick={(e) => e.stopPropagation()}
+          onkeypress={(e) => e.stopPropagation()}
+          role="none">
           {@render actions?.()}
         </div>
       </div>

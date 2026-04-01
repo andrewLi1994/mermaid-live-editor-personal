@@ -1,8 +1,6 @@
 import { C } from '$/constants';
-import { env } from './env';
 import { loadDataFromUrl } from './fileLoaders/loader';
 import { initLoading } from './loading';
-import { isOnMermaidAI } from './migration/domainMigration';
 import { applyMigrations } from './migrations';
 import { initURLSubscription, loadState, updateCodeStore, verifyState } from './state';
 import { initAnalytics, plausible } from './stats';
@@ -36,26 +34,6 @@ export const initHandler = async (): Promise<void> => {
 
 export const isMac = navigator.platform.toUpperCase().includes('MAC');
 export const cmdKey = isMac ? 'Cmd' : 'Ctrl';
-export const MCBaseURL = env.isEnabledMermaidChartLinks
-  ? 'https://mermaid.ai' // 'http://localhost:5174'
-  : 'https://example.com';
-
-export const getCheckoutUrl = ({
-  utmCampaign,
-  utmMedium
-}: {
-  utmCampaign: string;
-  utmMedium: string;
-}): string => {
-  const params = new URLSearchParams({
-    coupon: 'arDfyFT8',
-    tier: 'plus',
-    utm_campaign: utmCampaign,
-    utm_medium: utmMedium,
-    utm_source: getUTMSource()
-  });
-  return `${MCBaseURL}/app/user/billing/checkout?${params.toString()}`;
-};
 
 let count = 0;
 export const errorDebug = (limit = 1000) => {
@@ -109,8 +87,5 @@ function fallbackCopyToClipboard(text: string) {
 }
 
 export const getUTMSource = (): string => {
-  if (typeof window !== 'undefined' && isOnMermaidAI()) {
-    return C.aiLiveEditor;
-  }
   return C.utmSource;
 };

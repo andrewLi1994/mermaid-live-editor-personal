@@ -27,6 +27,7 @@ export interface State {
   mermaid: string;
   updateDiagram: boolean;
   rough: boolean;
+  title?: string;
   // All new options must be optional, as users would have old states saved
   renderCount?: number;
   panZoom?: boolean;
@@ -37,6 +38,7 @@ export interface State {
   loader?: LoaderConfig;
   filename?: string;
   originalFilename?: string;
+  lastActionTimestamp?: number;
 }
 
 export interface ValidatedState extends State {
