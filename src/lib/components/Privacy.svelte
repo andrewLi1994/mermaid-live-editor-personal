@@ -1,5 +1,4 @@
 <script>
-  import ExternalLinkWrapper from '$/components/ExternalLinkWrapper.svelte';
   import * as Dialog from '$/components/ui/dialog';
   import ShieldIcon from '~icons/material-symbols/shield-lock-outline-rounded';
 </script>
@@ -35,11 +34,8 @@
         target="_blank">publicly available</a
       >.
     </p>
-    <ExternalLinkWrapper domain="example.com" isVisible>
-      <p class="text-left">
-        External services (PNG/SVG/Kroki exports, "Save to Mermaid Chart", "Repair with AI", etc)
-        will share your diagram with those 3rd parties, and are highlighted in the UI on hover.
-      </p>
-    </ExternalLinkWrapper>
+    <p class="text-left font-light opacity-80">
+      External services (PNG/SVG/Kroki exports, etc) will share your diagram with those 3rd parties.
+    </p>
   </Dialog.Content>
 </Dialog.Root>

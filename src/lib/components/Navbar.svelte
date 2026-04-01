@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { logEvent, logMermaidChartClick } from '$lib/util/stats';
+  import { logEvent } from '$lib/util/stats';
   import { version } from 'mermaid/package.json';
 
   void logEvent('version', {
@@ -9,23 +9,18 @@
 
 <script lang="ts">
   import MainMenu from '$/components/MainMenu.svelte';
-  import { Button } from '$/components/ui/button';
   import { Separator } from '$/components/ui/separator';
-  import { dismissPromotion, getActivePromotion } from '$lib/util/promos/promo';
   import type { ComponentProps, Snippet } from 'svelte';
-  import MermaidIcon from '~icons/custom/mermaid';
   import DiagramTitle from './DiagramTitle.svelte';
-  import CloseIcon from '~icons/material-symbols/close-rounded';
   import GithubIcon from '~icons/mdi/github';
   import DropdownNavMenu from './DropdownNavMenu.svelte';
 
   interface Props {
     mobileToggle?: Snippet;
     children: Snippet;
-    hidePromotion?: boolean;
   }
 
-  let { children, mobileToggle, hidePromotion = false }: Props = $props();
+  let { children, mobileToggle }: Props = $props();
 
   type Links = ComponentProps<typeof DropdownNavMenu>['links'];
 
@@ -40,56 +35,11 @@
       href: 'https://github.com/mermaid-js/mermaid-cli'
     }
   ];
-
-  let activePromotion = $state(hidePromotion ? undefined : getActivePromotion());
-
-  const trackBannerClick = () => {
-    if (!activePromotion) {
-      return;
-    }
-    logEvent('bannerClick', {
-      promotion: activePromotion.id
-    });
-    logMermaidChartClick('banner');
-  };
 </script>
 
-{#if activePromotion}
-  <div class="top-bar z-10 flex h-fit w-full bg-primary">
-    <div
-      class="flex grow"
-      role="button"
-      tabindex="0"
-      onclick={trackBannerClick}
-      onkeypress={trackBannerClick}>
-      <activePromotion.component {closeBanner} />
-    </div>
-    {#snippet closeBanner()}
-      <Button
-        title="Dismiss banner"
-        variant="ghost"
-        class="hover:bg-transparent hover:text-[#261A56]"
-        size="sm"
-        onclick={() => {
-          dismissPromotion(activePromotion?.id);
-          activePromotion = undefined;
-        }}>
-        <CloseIcon />
-      </Button>
-    {/snippet}
-  </div>
-{/if}
-
-<nav class="z-50 flex items-center gap-2 p-4 sm:gap-4 sm:p-6">
+<nav class="z-50 flex items-center gap-1 p-2 sm:gap-4 sm:p-6">
   <div class="flex flex-1 items-center gap-2 overflow-hidden">
     <MainMenu />
-    <MermaidIcon class="size-6 shrink-0" />
-    <a href="/" class="hidden whitespace-nowrap text-accent sm:block">
-      {#if !mobileToggle}
-        Mermaid
-      {/if}
-      Live Editor
-    </a>
     <DiagramTitle />
   </div>
   <div id="menu" class="flex flex-nowrap items-center justify-between gap-3 overflow-hidden">

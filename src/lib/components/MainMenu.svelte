@@ -1,12 +1,10 @@
 <script lang="ts">
-  import McWrapper from '$/components/McWrapper.svelte';
   import * as Popover from '$/components/ui/popover';
   import { Switch } from '$/components/ui/switch';
   import { env } from '$/util/env';
-  import { defaultState, urlsStore } from '$/util/state';
+  import { defaultState } from '$/util/state';
   import { serializeState } from '$/util/serde';
   import { generateDiagramName } from '$/util/naming';
-  import { logMermaidChartClick } from '$/util/stats';
   import { cn } from '$/utils';
   import { mode, setMode } from 'mode-watcher';
   import type { Component, Snippet } from 'svelte';
@@ -15,11 +13,8 @@
   import BookIcon from '~icons/material-symbols/book-2-outline-rounded';
   import DuplicateIcon from '~icons/material-symbols/content-copy-outline-rounded';
   import ContrastIcon from '~icons/material-symbols/contrast';
-  import PluginIcon from '~icons/material-symbols/electrical-services-rounded';
   import MenuIcon from '~icons/material-symbols/menu-rounded';
   import CommunityIcon from '~icons/material-symbols/person-play-outline-rounded';
-  import PlaygroundIcon from '~icons/material-symbols/shape-line-outline';
-  import MermaidChartIcon from './MermaidChartIcon.svelte';
   import AISettingsModal from './AISettingsModal.svelte';
   import SparklesIcon from '~icons/material-symbols/kid-star-outline';
 
@@ -50,14 +45,6 @@
     },
     { href: window.location.href, icon: DuplicateIcon, label: 'Duplicate', renderer: menuItem },
     {
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).playground,
-      icon: PlaygroundIcon,
-      isSectionEnd: false,
-      label: 'Edit in Playground',
-      onclick: () => logMermaidChartClick('editInPlayground'),
-      renderer: mcMenuItem
-    },
-    {
       href: '#',
       icon: SparklesIcon,
       isSectionEnd: true,
@@ -84,30 +71,11 @@
       renderer: menuItem
     },
     {
-      checkDiagramType: false,
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).plugins,
-      icon: PluginIcon,
-      label: 'Plugins',
-      onclick: () => logMermaidChartClick('plugins'),
-      renderer: mcMenuItem,
-      sharesData: false
-    },
-    {
       href: '#',
       icon: ContrastIcon,
       isSectionEnd: true,
       label: 'Dark Mode',
       renderer: darkModeMenuItem
-    },
-    {
-      checkDiagramType: false,
-      class: 'text-accent border-b-0',
-      href: $urlsStore.mermaidChart({ medium: 'main_menu' }).home,
-      icon: MermaidChartIcon,
-      label: 'Mermaid',
-      onclick: () => logMermaidChartClick('mermaidHome'),
-      renderer: mcMenuItem,
-      sharesData: false
     }
   ]);
 </script>
@@ -132,16 +100,6 @@
     <options.icon class="size-5" />
     {options.label}
   </a>
-{/snippet}
-
-{#snippet mcMenuItem(item: MenuItem)}
-  <McWrapper
-    side="right"
-    labelPrefix={item.sharesData === false ? 'Opens a new tab in' : undefined}
-    sharesData={item.sharesData}
-    shouldCheckDiagramType={item.checkDiagramType}>
-    {@render menuItem(item)}
-  </McWrapper>
 {/snippet}
 
 {#snippet darkModeMenuItem(options: MenuItem)}

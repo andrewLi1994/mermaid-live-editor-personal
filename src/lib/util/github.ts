@@ -1,8 +1,17 @@
 import { Base64 } from 'js-base64';
-import { get } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { githubConfigStore } from './githubConfig';
 
 const GITHUB_API_URL = 'https://api.github.com';
+
+export interface GitHubFile {
+  name: string;
+  path: string;
+  [key: string]: unknown;
+}
+
+/** Shared store holding the list of .mmd files from GitHub. */
+export const githubFilesStore = writable<GitHubFile[]>([]);
 
 export const listDiagrams = async () => {
   const { path, repo, token } = get(githubConfigStore);
@@ -20,6 +29,7 @@ export const listDiagrams = async () => {
 
   if (!response.ok) {
     if (response.status === 404) {
+      githubFilesStore.set([]);
       return [];
     }
     throw new Error(`Failed to list diagrams: ${response.statusText}`);
@@ -27,9 +37,12 @@ export const listDiagrams = async () => {
 
   const data = await response.json();
   if (!Array.isArray(data)) {
+    githubFilesStore.set([]);
     return [];
   }
-  return data.filter((file: { name: string }) => file.name.endsWith('.mmd'));
+  const files = data.filter((file: { name: string }) => file.name.endsWith('.mmd'));
+  githubFilesStore.set(files);
+  return files;
 };
 
 export const getFileContent = async (filePath: string) => {
@@ -53,7 +66,12 @@ export const getFileContent = async (filePath: string) => {
   return Base64.decode(data.content);
 };
 
-export const saveDiagram = async (filename: string, content: string, originalFilename?: string) => {
+export const saveDiagram = async (
+  filename: string,
+  content: string,
+  options: { originalFilename?: string; saveAsCopy?: boolean } = {}
+) => {
+  const { originalFilename, saveAsCopy } = options;
   const { path, repo, token } = get(githubConfigStore);
   if (!token || !repo) {
     throw new Error('GitHub configuration missing');
@@ -116,8 +134,8 @@ export const saveDiagram = async (filename: string, content: string, originalFil
     throw new Error(`Failed to save diagram: ${error.message || response.statusText}`);
   }
 
-  // 3. Handle Rename: Delete the original file if it's different and was explicitly provided
-  if (originalFilename && originalFilename !== filename) {
+  // 3. Handle Rename: Delete the original file if it's different, it was explicitly provided, and we're not saving as copy
+  if (originalFilename && originalFilename !== filename && !saveAsCopy) {
     const originalFilePath = path ? `${path}/${originalFilename}` : originalFilename;
     try {
       // First get the SHA of the original file

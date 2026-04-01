@@ -38,6 +38,7 @@ export interface State {
   loader?: LoaderConfig;
   filename?: string;
   originalFilename?: string;
+  lastActionTimestamp?: number;
 }
 
 export interface ValidatedState extends State {

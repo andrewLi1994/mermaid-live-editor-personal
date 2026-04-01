@@ -1,7 +1,8 @@
 <script lang="ts">
   import Card from '$lib/components/Card/Card.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import type { HistoryEntry, HistoryType, State, Tab } from '$lib/types';
-  import { notify, prompt } from '$lib/util/notify';
+  import { notify } from '$lib/util/notify';
   import { getStateString, inputStateStore } from '$lib/util/state';
   import { logEvent } from '$lib/util/stats';
   import dayjs from 'dayjs';
@@ -100,11 +101,18 @@
     }
   };
 
-  const clearHistory = (id?: string): void => {
-    if (!id && !prompt('Clear all saved items?')) {
-      return;
-    }
-    clearHistoryData(id);
+  // Confirm dialog state for history deletion
+  let historyConfirmOpen = $state(false);
+  let historyIdToDelete = $state<string | undefined>(undefined);
+
+  const requestClearHistory = (id?: string): void => {
+    historyIdToDelete = id;
+    historyConfirmOpen = true;
+  };
+
+  const confirmClearHistory = (): void => {
+    clearHistoryData(historyIdToDelete);
+    historyIdToDelete = undefined;
   };
 
   const restoreHistoryItem = (state: State): void => {
@@ -132,6 +140,16 @@
     }
   });
 </script>
+
+<ConfirmDialog
+  bind:open={historyConfirmOpen}
+  title={historyIdToDelete ? 'Delete Item' : 'Clear All History'}
+  message={historyIdToDelete
+    ? 'Delete this history item?'
+    : 'Clear all saved history items? This cannot be undone.'}
+  confirmLabel={historyIdToDelete ? 'Delete' : 'Clear All'}
+  cancelLabel="Cancel"
+  onconfirm={confirmClearHistory} />
 
 <Card onselect={tabSelectHandler} isOpen isClosable={false} {tabs}>
   {#snippet actions()}
@@ -174,7 +192,7 @@
               id="clearHistory"
               variant="ghost"
               class="justify-start gap-2 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onclick={() => clearHistory()}>
+              onclick={() => requestClearHistory()}>
               <TrashAltIcon class="h-4 w-4" />
               Clear all
             </Button>
@@ -220,7 +238,7 @@
                     size="icon"
                     variant="ghost"
                     class="hover:text-destructive"
-                    onclick={() => clearHistory(id)}>
+                    onclick={() => requestClearHistory(id)}>
                     <TrashAltIcon />
                   </Button>
                 {/if}

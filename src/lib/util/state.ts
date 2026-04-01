@@ -11,7 +11,7 @@ import {
 import { parse } from './mermaid';
 import { localStorage, persist } from './persist';
 import { deserializeState, pakoSerde, serializeState } from './serde';
-import { errorDebug, formatJSON, getUTMSource, MCBaseURL } from './util';
+import { errorDebug, formatJSON } from './util';
 import { generateDiagramName } from './naming';
 
 export const defaultState: State = {
@@ -24,6 +24,7 @@ export const defaultState: State = {
   `,
   filename: '',
   grid: true,
+  lastActionTimestamp: 0,
   mermaid: formatJSON({
     theme: 'default'
   }),
@@ -144,23 +145,7 @@ export const urlsStore = derived([stateStore], ([{ code, serialized }]) => {
     mdCode: png
       ? `[![](${png})](${window.location.protocol}//${window.location.host}${window.location.pathname}#${serialized})`
       : '',
-    mermaidChart: ({
-      medium
-    }: {
-      medium: 'ai_repair' | 'main_menu' | 'save_diagram' | 'share' | 'vibe_diagramming';
-    }) => {
-      const utmSource = getUTMSource();
-      const params = new URLSearchParams({
-        utm_source: utmSource,
-        utm_medium: medium
-      }).toString();
-      return {
-        save: `${MCBaseURL}/app/plugin/save?state=${serialized}&${params}`,
-        playground: `${MCBaseURL}/play?${params}#${serialized}`,
-        plugins: `${MCBaseURL}/plugins?${params}`,
-        home: `${MCBaseURL}/?${params}`
-      };
-    },
+
     new: `${window.location.protocol}//${window.location.host}${window.location.pathname}#${serializeState(defaultState)}`,
     png,
     svg: rendererUrl ? `${rendererUrl}/svg/${serialized}` : '',
@@ -212,11 +197,13 @@ export const updateCodeStore = (newState: Partial<State>): void => {
   inputStateStore.update((state) => {
     const updated = { ...state, ...newState };
 
-    // Sync logic: Keep title and filename in sync
-    if (newState.title !== undefined && newState.filename === undefined) {
-      updated.filename = newState.title;
-    } else if (newState.filename !== undefined && newState.title === undefined) {
-      updated.title = newState.filename;
+    // Strict Sync logic: Keep title and filename 1:1 in sync
+    if (newState.title !== undefined || newState.filename !== undefined) {
+      const newName = newState.title ?? newState.filename;
+      if (newName !== undefined) {
+        updated.title = newName;
+        updated.filename = newName;
+      }
     }
 
     renderCount++;

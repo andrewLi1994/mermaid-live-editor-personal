@@ -3,9 +3,17 @@ import { aiConfigStore, type AIConfig } from './aiConfig';
 
 const buildPrompt = (code: string) => `
 You are a helpful assistant that names Mermaid diagrams.
-Based on the following Mermaid code, suggest a concise, descriptive kebab-case filename.
-The filename MUST end with .mmd.
-Output ONLY the filename string, no explanations, no quotes.
+Based on the following Mermaid code, suggest a concise, descriptive filename.
+
+Rules:
+1. Detect the dominant language used in the diagram's text content (labels, descriptions, node text — ignore Mermaid syntax keywords like "graph", "flowchart", "sequenceDiagram", etc.).
+2. Generate the filename in that same language.
+3. For Latin-script languages (English, French, etc.), use kebab-case (e.g. auth-login-flow.mmd).
+4. For non-Latin-script languages (Chinese, Japanese, Korean, Arabic, etc.), use natural short phrases with hyphens between words if needed (e.g. 用户登录流程.mmd, ログインフロー.mmd).
+5. If the content is mixed-language, use the language that appears most frequently.
+6. Keep the name concise — ideally 2-5 words.
+7. The filename MUST end with .mmd.
+8. Output ONLY the filename string, nothing else. No explanations, no quotes, no backticks.
 
 Mermaid Code:
 ${code}

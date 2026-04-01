@@ -1,5 +1,6 @@
 <script lang="ts">
   import { stateStore, updateCodeStore } from '$lib/util/state';
+  import { githubFilesStore } from '$lib/util/github';
   import { suggestFilename } from '$lib/util/ai';
   import { aiConfigStore } from '$lib/util/aiConfig';
   import { Button } from '$/components/ui/button';
@@ -8,6 +9,7 @@
   import { notify } from '$lib/util/notify';
   import RenameIcon from '~icons/material-symbols/drive-file-rename-outline-rounded';
   import LoadingIcon from '~icons/material-symbols/refresh-rounded';
+  import WarningIcon from '~icons/material-symbols/warning-outline-rounded';
 
   let isEditing = $state(false);
   let isLoading = $state(false);
@@ -15,6 +17,15 @@
   let inputRef = $state<HTMLInputElement>();
 
   let title = $derived($stateStore.title || 'Untitled Diagram');
+
+  // Collision: current filename matches an existing git file that isn't the one originally loaded
+  const hasCollision = $derived(
+    $githubFilesStore.some(
+      (f) =>
+        f.name.toLowerCase() === ($stateStore.filename || '').toLowerCase() &&
+        f.name.toLowerCase() !== ($stateStore.originalFilename || '').toLowerCase()
+    )
+  );
 
   const startEditing = () => {
     isEditing = true;
@@ -50,25 +61,42 @@
   };
 </script>
 
-<div class="flex items-center gap-2 px-2">
+<div class="flex items-center gap-1 px-1 sm:gap-2 sm:px-2">
   <div class="hidden h-4 w-[1px] bg-border sm:block"></div>
 
   <div class="group relative flex items-center gap-1">
     {#if isEditing}
-      <Input
-        bind:ref={inputRef}
-        class="h-7 w-48 bg-background/50 px-2 py-0 text-sm focus:ring-accent"
-        value={$stateStore.title}
-        oninput={(e) => updateCodeStore({ title: e.currentTarget.value })}
-        onblur={stopEditing}
-        onkeydown={stopEditing}
-        placeholder="Untitled Diagram" />
+      <div class="flex items-center gap-1">
+        <Input
+          bind:ref={inputRef}
+          class="h-7 w-48 bg-background/50 px-2 py-0 text-sm focus:ring-accent {hasCollision
+            ? 'border-orange-400 focus:ring-orange-400'
+            : ''}"
+          value={$stateStore.title}
+          oninput={(e) => updateCodeStore({ title: e.currentTarget.value })}
+          onblur={stopEditing}
+          onkeydown={stopEditing}
+          placeholder="Untitled Diagram" />
+        {#if hasCollision}
+          <span
+            title="A file with this name already exists in the repository. Saving will overwrite it.">
+            <WarningIcon class="size-4 shrink-0 text-orange-500" />
+          </span>
+        {/if}
+      </div>
     {:else}
       <button
-        class="rounded-md px-2 py-1 text-sm font-medium transition-colors hover:bg-accent/10 focus:ring-1 focus:ring-accent focus:outline-none"
+        class="max-w-[100px] truncate rounded-md px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent/10 focus:ring-1 focus:ring-accent focus:outline-none sm:max-w-xs {hasCollision
+          ? 'text-orange-500'
+          : ''}"
         onclick={startEditing}
-        title="Click to rename">
+        title={hasCollision
+          ? 'Warning: this name already exists in GitHub. Click to rename.'
+          : 'Click to rename'}>
         {title}
+        {#if hasCollision}
+          <WarningIcon class="inline size-3.5 text-orange-500" />
+        {/if}
       </button>
     {/if}
 
