@@ -3,7 +3,9 @@
   import * as Popover from '$/components/ui/popover';
   import { Switch } from '$/components/ui/switch';
   import { env } from '$/util/env';
-  import { urlsStore } from '$/util/state';
+  import { defaultState, urlsStore } from '$/util/state';
+  import { serializeState } from '$/util/serde';
+  import { generateDiagramName } from '$/util/naming';
   import { logMermaidChartClick } from '$/util/stats';
   import { cn } from '$/utils';
   import { mode, setMode } from 'mode-watcher';
@@ -18,6 +20,8 @@
   import CommunityIcon from '~icons/material-symbols/person-play-outline-rounded';
   import PlaygroundIcon from '~icons/material-symbols/shape-line-outline';
   import MermaidChartIcon from './MermaidChartIcon.svelte';
+  import AISettingsModal from './AISettingsModal.svelte';
+  import SparklesIcon from '~icons/material-symbols/kid-star-outline';
 
   interface MenuItem {
     label: string;
@@ -31,33 +35,52 @@
     renderer: (item: Omit<MenuItem, 'renderer'>) => ReturnType<Snippet>;
   }
 
+  let showAISettings = $state(false);
+
   const menuItems: MenuItem[] = $derived([
-    { label: 'New', icon: AddIcon, href: $urlsStore.new, renderer: menuItem },
-    { label: 'Duplicate', icon: DuplicateIcon, href: window.location.href, renderer: menuItem },
+    {
+      href: '#',
+      icon: AddIcon,
+      label: 'New',
+      onclick: () => {
+        const newState = { ...defaultState, title: generateDiagramName() };
+        window.location.hash = serializeState(newState);
+      },
+      renderer: menuItem
+    },
+    { href: window.location.href, icon: DuplicateIcon, label: 'Duplicate', renderer: menuItem },
     {
       href: $urlsStore.mermaidChart({ medium: 'main_menu' }).playground,
       icon: PlaygroundIcon,
-      isSectionEnd: true,
+      isSectionEnd: false,
       label: 'Edit in Playground',
       onclick: () => logMermaidChartClick('editInPlayground'),
       renderer: mcMenuItem
     },
     {
-      label: 'Mermaid.js',
-      icon: MermaidTailIcon,
+      href: '#',
+      icon: SparklesIcon,
+      isSectionEnd: true,
+      label: 'AI Settings',
+      onclick: () => (showAISettings = true),
+      renderer: menuItem
+    },
+    {
       href: env.docsUrl,
+      icon: MermaidTailIcon,
+      label: 'Mermaid.js',
       renderer: menuItem
     },
     {
-      label: 'Documentation',
-      icon: BookIcon,
       href: `${env.docsUrl}/intro/`,
+      icon: BookIcon,
+      label: 'Documentation',
       renderer: menuItem
     },
     {
-      label: 'Community',
-      icon: CommunityIcon,
       href: 'https://discord.gg/sKeNQX4Wtj',
+      icon: CommunityIcon,
+      label: 'Community',
       renderer: menuItem
     },
     {
@@ -92,8 +115,15 @@
 {#snippet menuItem(options: MenuItem)}
   <a
     href={options.href}
-    target="_blank"
-    onclick={options.onclick}
+    target={options.href.startsWith('http') ? '_blank' : undefined}
+    onclick={(e) => {
+      if (options.onclick) {
+        options.onclick();
+        if (options.href === '#' || options.href.includes(window.location.host)) {
+          e.preventDefault();
+        }
+      }
+    }}
     class={cn(
       'flex items-center justify-start gap-2 border-b-2 p-2 px-3 hover:bg-muted',
       options.isSectionEnd && 'border-border-dark',
@@ -141,3 +171,5 @@
     {/each}
   </Popover.Content>
 </Popover.Root>
+
+<AISettingsModal bind:open={showAISettings} />

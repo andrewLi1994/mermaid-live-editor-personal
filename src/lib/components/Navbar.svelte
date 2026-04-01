@@ -14,6 +14,7 @@
   import { dismissPromotion, getActivePromotion } from '$lib/util/promos/promo';
   import type { ComponentProps, Snippet } from 'svelte';
   import MermaidIcon from '~icons/custom/mermaid';
+  import DiagramTitle from './DiagramTitle.svelte';
   import CloseIcon from '~icons/material-symbols/close-rounded';
   import GithubIcon from '~icons/mdi/github';
   import DropdownNavMenu from './DropdownNavMenu.svelte';
@@ -80,15 +81,16 @@
 {/if}
 
 <nav class="z-50 flex items-center gap-2 p-4 sm:gap-4 sm:p-6">
-  <div class="flex flex-1 items-center gap-2">
+  <div class="flex flex-1 items-center gap-2 overflow-hidden">
     <MainMenu />
-    <MermaidIcon class="hidden size-6 sm:block" />
+    <MermaidIcon class="size-6 shrink-0" />
     <a href="/" class="hidden whitespace-nowrap text-accent sm:block">
       {#if !mobileToggle}
         Mermaid
       {/if}
       Live Editor
     </a>
+    <DiagramTitle />
   </div>
   <div id="menu" class="flex flex-nowrap items-center justify-between gap-3 overflow-hidden">
     <div class="hidden items-center gap-3 md:flex">

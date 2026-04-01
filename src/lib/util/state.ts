@@ -12,6 +12,7 @@ import { parse } from './mermaid';
 import { localStorage, persist } from './persist';
 import { deserializeState, pakoSerde, serializeState } from './serde';
 import { errorDebug, formatJSON, getUTMSource, MCBaseURL } from './util';
+import { generateDiagramName } from './naming';
 
 export const defaultState: State = {
   code: `flowchart TD
@@ -29,6 +30,7 @@ export const defaultState: State = {
   originalFilename: '',
   panZoom: true,
   rough: false,
+  title: '',
   updateDiagram: true
 };
 
@@ -174,6 +176,12 @@ export const loadState = (data: string): void => {
     if (!state.mermaid) {
       state.mermaid = defaultState.mermaid;
     }
+    if (!state.title || !state.title.trim()) {
+      state.title = generateDiagramName();
+    }
+    if (!state.filename || !state.filename.trim()) {
+      state.filename = state.title;
+    }
     const mermaidConfig: MermaidConfig =
       typeof state.mermaid === 'string'
         ? (JSON.parse(state.mermaid) as MermaidConfig)
@@ -202,8 +210,17 @@ export const loadState = (data: string): void => {
 let renderCount = 0;
 export const updateCodeStore = (newState: Partial<State>): void => {
   inputStateStore.update((state) => {
+    const updated = { ...state, ...newState };
+
+    // Sync logic: Keep title and filename in sync
+    if (newState.title !== undefined && newState.filename === undefined) {
+      updated.filename = newState.title;
+    } else if (newState.filename !== undefined && newState.title === undefined) {
+      updated.title = newState.filename;
+    }
+
     renderCount++;
-    return { ...state, ...newState, renderCount };
+    return { ...updated, renderCount };
   });
 };
 

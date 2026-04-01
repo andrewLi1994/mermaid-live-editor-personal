@@ -24,8 +24,15 @@
 
   type Exporter = (context: CanvasRenderingContext2D, image: HTMLImageElement) => () => void;
 
-  const getFileName = (extension: string) =>
-    `mermaid-diagram-${dayjs().format('YYYY-MM-DD-HHmmss')}.${extension}`;
+  const getFileName = (extension: string) => {
+    const title = $stateStore.title;
+    if (title && title.trim()) {
+      // Use the specified title (ensuring it has the correct extension)
+      const base = title.toLowerCase().endsWith('.mmd') ? title.slice(0, -4) : title;
+      return `${base.replace(/\s+/g, '-')}.${extension}`;
+    }
+    return `mermaid-diagram-${dayjs().format('YYYY-MM-DD-HHmmss')}.${extension}`;
+  };
 
   /**
    * Fix text clipping in exported SVG for hand-drawn (rough) mode.
