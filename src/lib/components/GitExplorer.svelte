@@ -215,10 +215,19 @@
       <ul class="flex flex-col gap-2">
         {#each $githubFilesStore as file (file.path)}
           <li
-            class="group flex items-center justify-between rounded-md border p-2 transition-colors
+            role="button"
+            tabindex="0"
+            class="group flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors
               {$stateStore.originalFilename === file.name || $stateStore.filename === file.name
               ? 'border-primary/50 bg-primary/10 text-primary-foreground dark:border-primary/30 dark:bg-primary/20'
-              : 'hover:bg-accent hover:text-accent-foreground'}">
+              : 'hover:bg-accent hover:text-accent-foreground'}"
+            onclick={() => !loading && deletingFile !== file.name && loadDiagram(file)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (!loading && deletingFile !== file.name) loadDiagram(file);
+              }
+            }}>
             <div class="flex items-center gap-2 overflow-hidden">
               <FileIcon
                 class="shrink-0 {$stateStore.originalFilename === file.name ||
@@ -236,7 +245,10 @@
               <Button
                 size="sm"
                 variant="outline"
-                onclick={() => loadDiagram(file)}
+                onclick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                  loadDiagram(file);
+                }}
                 disabled={loading || deletingFile === file.name}>
                 Load
               </Button>
@@ -244,7 +256,10 @@
                 size="sm"
                 variant="outline"
                 class="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
-                onclick={() => requestDelete(file)}
+                onclick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                  requestDelete(file);
+                }}
                 disabled={loading || deletingFile === file.name}>
                 {deletingFile === file.name ? '...' : 'Delete'}
               </Button>

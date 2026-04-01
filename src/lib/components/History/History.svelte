@@ -206,15 +206,26 @@
       <GitExplorer />
     {:else if $historyStore.length > 0}
       {#each $historyStore as { id, state, time, name, url, type } (id)}
-        <li class="flex flex-col gap-2">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex flex-col">
+        <li class="flex flex-col">
+          <div
+            role="button"
+            tabindex="0"
+            class="flex cursor-pointer flex-col gap-2 rounded-md p-2 transition-colors hover:bg-accent hover:text-accent-foreground sm:flex-row sm:items-center sm:justify-between"
+            onclick={() => restoreHistoryItem(state)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                restoreHistoryItem(state);
+              }
+            }}>
+            <div class="flex flex-col overflow-hidden">
               {#if url}
                 <a
                   href={url}
                   target="_blank"
                   title="Open revision in new tab"
-                  class="text-blue-500 hover:underline">{name}</a>
+                  class="truncate text-blue-500 hover:underline"
+                  onclick={(e) => e.stopPropagation()}>{name}</a>
               {:else}
                 <span
                   class="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap sm:max-w-none"
@@ -230,7 +241,13 @@
                 {dayjs(time).fromNow()}
               </span>
               <div class="flex items-center gap-1">
-                <Button size="icon" variant="ghost" onclick={() => restoreHistoryItem(state)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onclick={(e: MouseEvent) => {
+                    e.stopPropagation();
+                    restoreHistoryItem(state);
+                  }}>
                   <UndoIcon />
                 </Button>
                 {#if type !== 'loader'}
@@ -238,14 +255,17 @@
                     size="icon"
                     variant="ghost"
                     class="hover:text-destructive"
-                    onclick={() => requestClearHistory(id)}>
+                    onclick={(e: MouseEvent) => {
+                      e.stopPropagation();
+                      requestClearHistory(id);
+                    }}>
                     <TrashAltIcon />
                   </Button>
                 {/if}
               </div>
             </div>
           </div>
-          <Separator />
+          <Separator class="my-1" />
         </li>
       {/each}
     {:else}
