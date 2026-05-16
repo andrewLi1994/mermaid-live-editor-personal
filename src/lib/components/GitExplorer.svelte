@@ -3,7 +3,13 @@
     deleteDiagram,
     getFileContent,
     githubFilesStore,
+    githubReposStore,
+    githubUserStore,
+    getGitHubUser,
+    listRepositories,
+    loginGitHub,
     listDiagrams,
+    logoutGitHub,
     type GitHubFile
   } from '$lib/util/github';
   import { githubConfigStore } from '$lib/util/githubConfig';
@@ -14,6 +20,7 @@
   import FolderIcon from '~icons/material-symbols/folder-open-outline';
   import RefreshIcon from '~icons/material-symbols/refresh-rounded';
   import SettingsIcon from '~icons/material-symbols/settings-outline-rounded';
+  import GithubIcon from '~icons/mdi/github';
   import { Button } from './ui/button';
   import { Input } from './ui/input';
   import { Separator } from './ui/separator';
@@ -28,12 +35,11 @@
   let fileToDelete = $state<GitHubFile | null>(null);
 
   // Local state for settings to avoid direct binding issues with $githubConfigStore
-  let token = $state($githubConfigStore.token);
   let repo = $state($githubConfigStore.repo);
   let path = $state($githubConfigStore.path);
 
   const saveSettings = () => {
-    githubConfigStore.set({ path, repo, token });
+    githubConfigStore.set({ path, repo });
     showSettings = false;
     void fetchDiagrams();
   };
@@ -47,8 +53,20 @@
     return `diagram-${index}.mmd`;
   };
 
+  const fetchRepositories = async () => {
+    try {
+      const repos = await listRepositories();
+      if (!repo && repos.length > 0) {
+        repo = repos[0].fullName;
+        githubConfigStore.set({ path, repo });
+      }
+    } catch (error: unknown) {
+      notify(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const fetchDiagrams = async () => {
-    if (!$githubConfigStore.token || !$githubConfigStore.repo) {
+    if (!$githubUserStore || !$githubConfigStore.repo) {
       return;
     }
     loading = true;
@@ -64,6 +82,33 @@
     } finally {
       loading = false;
     }
+  };
+
+  const initializeGitHub = async () => {
+    try {
+      await getGitHubUser();
+      await fetchRepositories();
+      await fetchDiagrams();
+    } catch {
+      githubUserStore.set(null);
+      githubReposStore.set([]);
+      githubFilesStore.set([]);
+    }
+  };
+
+  const disconnectGitHub = async () => {
+    try {
+      await logoutGitHub();
+      notify('Disconnected from GitHub');
+    } catch (error: unknown) {
+      notify(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleRepoChange = (value: string) => {
+    repo = value;
+    githubConfigStore.set({ path, repo });
+    void fetchDiagrams();
   };
 
   const loadDiagram = async (file: GitHubFile) => {
@@ -114,7 +159,7 @@
   });
 
   onMount(() => {
-    void fetchDiagrams();
+    void initializeGitHub();
   });
 </script>
 
@@ -155,13 +200,50 @@
 
   {#if showSettings}
     <div class="flex flex-col gap-3 rounded-md border bg-secondary/20 p-3 text-sm">
-      <div class="flex flex-col gap-1">
-        <label for="token">Personal Access Token</label>
-        <Input id="token" type="password" bind:value={token} placeholder="github_pat_..." />
+      <div class="flex flex-col gap-1 rounded border bg-background p-2">
+        <div class="font-medium">GitHub Account</div>
+        {#if $githubUserStore}
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1 text-xs font-semibold text-green-500">
+                <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                {$githubUserStore.login}
+              </div>
+              <div class="truncate text-[11px] text-muted-foreground">
+                Connected with GitHub OAuth
+              </div>
+            </div>
+            <Button size="sm" variant="outline" class="mt-1" onclick={disconnectGitHub}
+              >Disconnect</Button>
+          </div>
+        {:else}
+          <div class="pb-1 text-[11px] text-muted-foreground">
+            Log in to sync with your repositories securely.
+          </div>
+          <Button size="sm" class="bg-black text-white hover:bg-neutral-800" onclick={loginGitHub}>
+            <GithubIcon class="mr-2" />
+            Log in with GitHub
+          </Button>
+        {/if}
       </div>
       <div class="flex flex-col gap-1">
         <label for="repo">Repository (user/repo)</label>
-        <Input id="repo" bind:value={repo} placeholder="username/my-diagrams" />
+        {#if $githubUserStore}
+          <select
+            id="repo"
+            class="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            value={repo}
+            onchange={(event) => handleRepoChange(event.currentTarget.value)}>
+            <option value="" disabled>Select a repository</option>
+            {#each $githubReposStore as repository (repository.fullName)}
+              <option value={repository.fullName}>
+                {repository.fullName}{repository.private ? ' (private)' : ''}
+              </option>
+            {/each}
+          </select>
+        {:else}
+          <Input id="repo" value={repo} placeholder="Log in to choose a repository" disabled />
+        {/if}
       </div>
       <div class="flex flex-col gap-1">
         <label for="path">Path in Repo</label>
@@ -208,27 +290,33 @@
     {:else if $githubFilesStore.length === 0}
       <div
         class="flex h-32 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-primary-foreground/50">
-        <p>No .mmd files found.</p>
-        <p class="text-xs">Configure your GitHub repo and token above.</p>
+        {#if !$githubUserStore}
+          <p>Log in with GitHub to load diagrams.</p>
+          <Button size="sm" class="bg-black text-white hover:bg-neutral-800" onclick={loginGitHub}>
+            <GithubIcon class="mr-2" />
+            Log in with GitHub
+          </Button>
+        {:else if !$githubConfigStore.repo}
+          <p>Select a repository to load diagrams.</p>
+          <p class="text-xs">Open settings above to choose a repo.</p>
+        {:else}
+          <p>No .mmd files found.</p>
+          <p class="text-xs">Check the repository path above or save a new diagram.</p>
+        {/if}
       </div>
     {:else}
       <ul class="flex flex-col gap-2">
         {#each $githubFilesStore as file (file.path)}
           <li
-            role="button"
-            tabindex="0"
-            class="group flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors
+            class="group flex items-center justify-between gap-2 rounded-md border p-2 transition-colors
               {$stateStore.originalFilename === file.name || $stateStore.filename === file.name
               ? 'border-primary/50 bg-primary/10 text-primary-foreground dark:border-primary/30 dark:bg-primary/20'
-              : 'hover:bg-accent hover:text-accent-foreground'}"
-            onclick={() => !loading && deletingFile !== file.name && loadDiagram(file)}
-            onkeydown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (!loading && deletingFile !== file.name) loadDiagram(file);
-              }
-            }}>
-            <div class="flex items-center gap-2 overflow-hidden">
+              : 'hover:bg-accent hover:text-accent-foreground'}">
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left"
+              onclick={() => loadDiagram(file)}
+              disabled={loading || deletingFile === file.name}>
               <FileIcon
                 class="shrink-0 {$stateStore.originalFilename === file.name ||
                 $stateStore.filename === file.name
@@ -240,15 +328,12 @@
                   ? 'font-medium'
                   : ''}"
                 title={file.name}>{file.name}</span>
-            </div>
+            </button>
             <div class="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onclick={(e: MouseEvent) => {
-                  e.stopPropagation();
-                  loadDiagram(file);
-                }}
+                onclick={() => loadDiagram(file)}
                 disabled={loading || deletingFile === file.name}>
                 Load
               </Button>
@@ -256,10 +341,7 @@
                 size="sm"
                 variant="outline"
                 class="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
-                onclick={(e: MouseEvent) => {
-                  e.stopPropagation();
-                  requestDelete(file);
-                }}
+                onclick={() => requestDelete(file)}
                 disabled={loading || deletingFile === file.name}>
                 {deletingFile === file.name ? '...' : 'Delete'}
               </Button>
