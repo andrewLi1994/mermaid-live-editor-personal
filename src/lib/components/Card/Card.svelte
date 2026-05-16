@@ -4,10 +4,13 @@
   import { quintOut } from 'svelte/easing';
   import { slide } from 'svelte/transition';
   import CollapseAllIcon from '~icons/material-symbols/collapse-all-rounded';
+  import ExpandAllIcon from '~icons/material-symbols/expand-all-rounded';
+  import { Button } from '../ui/button';
   import Tabs from './Tabs.svelte';
 
   interface Props {
     isClosable?: boolean;
+    isMinimizable?: boolean;
     isOpen?: boolean;
     isStackable?: boolean;
     tabs?: Tab[];
@@ -18,12 +21,14 @@
       class?: string;
     };
     onselect?: (tab: Tab) => void;
+    onopenchange?: (isOpen: boolean) => void;
     actions?: Snippet;
     children: Snippet;
   }
 
   let {
     isClosable = true,
+    isMinimizable = false,
     isOpen = false,
     isStackable = false,
     tabs = [],
@@ -31,14 +36,25 @@
     title,
     icon,
     onselect,
+    onopenchange,
     actions,
     children
   }: Props = $props();
 
+  const setIsOpen = (nextIsOpen: boolean) => {
+    isOpen = nextIsOpen;
+    onopenchange?.(isOpen);
+  };
+
   const toggleCardOpen = () => {
     if (isClosable) {
-      isOpen = !isOpen;
+      setIsOpen(!isOpen);
     }
+  };
+
+  const toggleMinimized = (event: MouseEvent) => {
+    event.stopPropagation();
+    setIsOpen(!isOpen);
   };
 
   let isTabsShown = $derived(isOpen && tabs.length > 0);
@@ -67,25 +83,41 @@
         {title}
       </span>
     {/if}
-    {#if (isOpen && tabs && tabs.length > 0) || actions}
+    {#if (isOpen && tabs && tabs.length > 0) || (isOpen && actions)}
       <div class="scrollbar-none flex flex-grow items-center gap-2 overflow-x-auto">
         {#if isOpen && tabs && tabs.length > 0}
           <Tabs {onselect} {tabs} {activeTabID} />
         {/if}
 
-        <div
-          class="flex items-center gap-2"
-          onclick={(e) => e.stopPropagation()}
-          onkeypress={(e) => e.stopPropagation()}
-          role="none">
-          {@render actions?.()}
-        </div>
+        {#if isOpen && actions}
+          <div
+            class="flex items-center gap-2"
+            onclick={(e) => e.stopPropagation()}
+            onkeypress={(e) => e.stopPropagation()}
+            role="none">
+            {@render actions?.()}
+          </div>
+        {/if}
       </div>
     {/if}
 
-    {#if isOpen && isClosable}
+    {#if isMinimizable || (isOpen && isClosable)}
       <div class="flex flex-shrink-0 items-center">
-        <CollapseAllIcon />
+        {#if isMinimizable}
+          <Button
+            variant="ghost"
+            size="icon"
+            title={isOpen ? 'Minimize panel' : 'Restore panel'}
+            onclick={toggleMinimized}>
+            {#if isOpen}
+              <CollapseAllIcon />
+            {:else}
+              <ExpandAllIcon />
+            {/if}
+          </Button>
+        {:else}
+          <CollapseAllIcon />
+        {/if}
       </div>
     {/if}
   </div>

@@ -23,7 +23,9 @@
   import { logEvent } from '$/util/stats';
   import { initHandler } from '$/util/util';
   import { onMount } from 'svelte';
+  import { historyModeStore } from '$lib/components/History/history';
   import CodeIcon from '~icons/custom/code';
+  import ExpandAllIcon from '~icons/material-symbols/expand-all-rounded';
   import HistoryIcon from '~icons/material-symbols/history';
   import GearIcon from '~icons/material-symbols/settings-outline-rounded';
 
@@ -50,6 +52,7 @@
   let width = $state(0);
   let isMobile = $derived(width < 640);
   let isViewMode = $state(true);
+  let isEditorPanelOpen = $state(true);
 
   onMount(async () => {
     await initHandler();
@@ -60,10 +63,30 @@
 
   let isHistoryOpen = $state(false);
 
-  let editorPane: Resizable.Pane | undefined;
+  const openGitPanel = () => {
+    historyModeStore.set('git');
+    isHistoryOpen = true;
+  };
+
+  const setEditorPanelOpen = (isOpen: boolean) => {
+    isEditorPanelOpen = isOpen;
+    if (!isOpen) {
+      isViewMode = true;
+    } else if (isMobile) {
+      isViewMode = false;
+    }
+  };
+
+  let editorPane = $state<Resizable.Pane | undefined>();
   $effect(() => {
-    if (isMobile) {
+    if (isMobile && isEditorPanelOpen) {
       editorPane?.resize(50);
+    }
+  });
+
+  $effect(() => {
+    if (!isMobile && isEditorPanelOpen && editorPane) {
+      editorPane.resize(30);
     }
   });
 
@@ -121,7 +144,7 @@
     </div>
   {/snippet}
 
-  <Navbar mobileToggle={isMobile ? mobileToggle : undefined}>
+  <Navbar mobileToggle={isMobile ? mobileToggle : undefined} onopenGitPanel={openGitPanel}>
     <Toggle bind:pressed={isHistoryOpen} size="sm">
       <HistoryIcon />
     </Toggle>
@@ -161,35 +184,51 @@
     <div
       class={[
         'size-full',
-        isMobile && ['w-[200%] duration-300', isViewMode && '-translate-x-1/2']
+        isMobile && isEditorPanelOpen && ['w-[200%] duration-300', isViewMode && '-translate-x-1/2']
       ]}>
       <Resizable.PaneGroup
         direction="horizontal"
         autoSaveId="liveEditor"
         class="gap-4 p-2 pt-0 sm:gap-0 sm:p-6 sm:pt-0">
-        <Resizable.Pane bind:this={editorPane} defaultSize={30} minSize={15}>
-          <div class="flex h-full flex-col gap-4 sm:gap-6">
-            <Card
-              onselect={tabSelectHandler}
-              isOpen
-              tabs={editorTabs}
-              activeTabID={$stateStore.editorMode}
-              isClosable={false}>
-              {#snippet actions()}
-                <DiagramDocButton />
-              {/snippet}
-              <Editor {isMobile} />
-            </Card>
+        {#if isEditorPanelOpen}
+          <Resizable.Pane bind:this={editorPane} defaultSize={30} minSize={15}>
+            <div class="flex h-full flex-col gap-4 sm:gap-6">
+              <Card
+                onselect={tabSelectHandler}
+                isOpen={isEditorPanelOpen}
+                onopenchange={setEditorPanelOpen}
+                isMinimizable
+                tabs={editorTabs}
+                activeTabID={$stateStore.editorMode}
+                isClosable={false}>
+                {#snippet actions()}
+                  <DiagramDocButton />
+                {/snippet}
+                <Editor {isMobile} />
+              </Card>
 
-            <div class="group flex flex-wrap justify-between gap-4 sm:gap-6">
-              <Preset />
-              <Actions />
+              <div class="group flex flex-wrap justify-between gap-4 sm:gap-6">
+                <Preset />
+                <Actions />
+              </div>
             </div>
-          </div>
-        </Resizable.Pane>
-        <Resizable.Handle class="mr-1 hidden opacity-0 sm:block" />
+          </Resizable.Pane>
+          <Resizable.Handle class="mr-1 hidden opacity-0 sm:block" />
+        {/if}
         <Resizable.Pane minSize={15} class="relative flex h-full flex-1 flex-col overflow-hidden">
           <View {panZoomState} shouldShowGrid={$stateStore.grid} />
+          {#if !isEditorPanelOpen}
+            <div class="absolute top-4 left-4 z-10">
+              <Button
+                size="icon"
+                variant="secondary"
+                class="shadow-sm"
+                title="Restore panel"
+                onclick={() => setEditorPanelOpen(true)}>
+                <ExpandAllIcon />
+              </Button>
+            </div>
+          {/if}
           <div class="absolute top-0 right-0"><PanZoomToolbar {panZoomState} /></div>
           <div class="absolute right-0 bottom-0"><VersionSecurityToolbar /></div>
           <div class="absolute bottom-0 left-0 sm:left-5"><SyncRoughToolbar /></div>
