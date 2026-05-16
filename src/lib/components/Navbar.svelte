@@ -10,31 +10,17 @@
 <script lang="ts">
   import MainMenu from '$/components/MainMenu.svelte';
   import { Separator } from '$/components/ui/separator';
-  import type { ComponentProps, Snippet } from 'svelte';
+  import type { Snippet } from 'svelte';
   import DiagramTitle from './DiagramTitle.svelte';
-  import GithubIcon from '~icons/mdi/github';
-  import DropdownNavMenu from './DropdownNavMenu.svelte';
+  import GitHubMenu from './GitHubMenu.svelte';
 
   interface Props {
     mobileToggle?: Snippet;
+    onopenGitPanel?: () => void;
     children: Snippet;
   }
 
-  let { children, mobileToggle }: Props = $props();
-
-  type Links = ComponentProps<typeof DropdownNavMenu>['links'];
-
-  const githubLinks: Links = [
-    { title: 'Mermaid JS', href: 'https://github.com/mermaid-js/mermaid' },
-    {
-      title: 'Mermaid Live Editor',
-      href: 'https://github.com/mermaid-js/mermaid-live-editor'
-    },
-    {
-      title: 'Mermaid CLI',
-      href: 'https://github.com/mermaid-js/mermaid-cli'
-    }
-  ];
+  let { children, mobileToggle, onopenGitPanel }: Props = $props();
 </script>
 
 <nav class="z-50 flex items-center gap-1 p-2 sm:gap-4 sm:p-6">
@@ -44,7 +30,7 @@
   </div>
   <div id="menu" class="flex flex-nowrap items-center justify-between gap-3 overflow-hidden">
     <div class="hidden items-center gap-3 md:flex">
-      <DropdownNavMenu icon={GithubIcon} links={githubLinks} />
+      <GitHubMenu {onopenGitPanel} />
       <Separator orientation="vertical" />
     </div>
     {@render children()}
